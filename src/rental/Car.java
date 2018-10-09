@@ -60,4 +60,18 @@ public class Car {
         // equals-method for Reservation is required!
         reservations.remove(reservation);
     }
+
+    public int getReservationAmount(){
+        return reservations.size();
+    }
+
+    public List<Reservation> getReservationsByRenter(String companyName){
+        List<Reservation> reservationsForRenter = new ArrayList<>();
+        for (Reservation reservation: reservations) {
+            if (reservation.getCarRenter().equals(companyName)){
+                reservationsForRenter.add(reservation);
+            }
+        }
+        return reservationsForRenter;
+    }
 }

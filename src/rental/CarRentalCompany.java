@@ -1,17 +1,11 @@
 package rental;
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.rmi.RemoteException;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class CarRentalCompany {
+public class CarRentalCompany implements CarRentalCompanyStub{
 
 	private static Logger logger = Logger.getLogger(CarRentalCompany.class.getName());
 	
@@ -76,7 +70,7 @@ public class CarRentalCompany {
 	}
 	
 	// mark
-	public boolean isAvailable(String carTypeName, Date start, Date end) {
+	public boolean isAvailable(String carTypeName, Date start, Date end) throws RemoteException {
 		logger.log(Level.INFO, "<{0}> Checking availability for car type {1}", new Object[]{name, carTypeName});
 		if(carTypes.containsKey(carTypeName)) {
 			return getAvailableCarTypes(start, end).contains(carTypes.get(carTypeName));
@@ -85,7 +79,7 @@ public class CarRentalCompany {
 		}
 	}
 	
-	public Set<CarType> getAvailableCarTypes(Date start, Date end) {
+	public Set<CarType> getAvailableCarTypes(Date start, Date end) throws RemoteException {
 		Set<CarType> availableCarTypes = new HashSet<CarType>();
 		for (Car car : cars) {
 			if (car.isAvailable(start, end)) {
@@ -98,6 +92,20 @@ public class CarRentalCompany {
 	/*********
 	 * CARS *
 	 *********/
+
+	public int getReservationAmountByCarType(String carType) throws RemoteException{
+		int amount = 0;
+
+		CarType realCarType = this.getCarType(carType);
+
+		for (Car car: cars){
+			if (car.getType().equals(realCarType)){
+				amount += car.getReservationAmount();
+			}
+		}
+
+		return amount;
+	}
 	
 	private Car getCar(int uid) {
 		for (Car car : cars) {
@@ -122,7 +130,7 @@ public class CarRentalCompany {
 	 ****************/
 
 	public Quote createQuote(ReservationConstraints constraints, String client)
-			throws ReservationException {
+			throws ReservationException, RemoteException {
 		logger.log(Level.INFO, "<{0}> Creating tentative reservation for {1} with constraints {2}", 
                         new Object[]{name, client, constraints.toString()});
 		
@@ -144,7 +152,7 @@ public class CarRentalCompany {
 						/ (1000 * 60 * 60 * 24D));
 	}
 
-	public Reservation confirmQuote(Quote quote) throws ReservationException {
+	public Reservation confirmQuote(Quote quote) throws ReservationException, RemoteException {
 		logger.log(Level.INFO, "<{0}> Reservation of {1}", new Object[]{name, quote.toString()});
 		List<Car> availableCars = getAvailableCars(quote.getCarType(), quote.getStartDate(), quote.getEndDate());
 		if(availableCars.isEmpty())
@@ -155,6 +163,17 @@ public class CarRentalCompany {
 		Reservation res = new Reservation(quote, car.getId());
 		car.addReservation(res);
 		return res;
+	}
+
+	public List<Reservation> getReservationsByRenter(String companyName) throws RemoteException{
+		List<Reservation> reservationsForRenter = new ArrayList<>();
+
+		for (Car car: cars){
+			List<Reservation> reservations = car.getReservationsByRenter(companyName);
+			reservationsForRenter.addAll(reservations);
+		}
+
+		return reservationsForRenter;
 	}
 
 	public void cancelReservation(Reservation res) {

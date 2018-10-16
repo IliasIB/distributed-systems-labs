@@ -24,3 +24,15 @@ hs_err_pid*
 
 # IDE
 .idea/
+/session_2/CarRental/nbproject/private/
+/session_2/CarRental-lib/nbproject/private/
+/session_2/CarRental-ejb/nbproject/private/
+/session_2/CarRental-client/nbproject/private/
+/session_2/CarRental/build/
+/session_2/CarRental/dist/
+/session_2/CarRental-lib/build/
+/session_2/CarRental-lib/dist/
+/session_2/CarRental-ejb/dist/
+/session_2/CarRental-ejb/build/
+/session_2/CarRental-client/build/
+/session_2/CarRental-client/dist/

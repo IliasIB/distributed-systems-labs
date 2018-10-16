@@ -17,13 +17,17 @@ public class Main extends AbstractTestAgency<ReservationSessionRemote, ManagerSe
     @EJB
     static CarRentalSessionRemote session;
     
-    @EJB
     Map<String, ReservationSessionRemote> reservationSessions = new HashMap<String, ReservationSessionRemote>();
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
         System.out.println("found rental companies: "+session.getAllRentalCompanies());
+        Main main = new Main("simpleTrips");
+        try {
+            main.run();            
+        } catch (Exception e) {
+        }
     }
     
     public Main(String scriptFile){

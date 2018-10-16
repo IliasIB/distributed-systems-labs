@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.ejb.Stateful;
 import rental.CarRentalCompany;
 import rental.CarType;
 import rental.Quote;
@@ -14,7 +15,7 @@ import rental.Reservation;
 import rental.ReservationConstraints;
 import rental.ReservationException;
 
-
+@Stateful
 public class ReservationSession implements ReservationSessionRemote{
     List<Quote> quotes = new ArrayList<Quote>();
 
@@ -39,7 +40,8 @@ public class ReservationSession implements ReservationSessionRemote{
         try {
             for (Quote quote : quotes) {
                 CarRentalCompany rental = RentalStore.getRental(quote.getRentalCompany());
-                tempReservations.add(rental.confirmQuote(quote));
+                Reservation reservation = rental.confirmQuote(quote);
+                tempReservations.add(reservation);
             }
             quotes.clear();
         } catch (ReservationException e) {

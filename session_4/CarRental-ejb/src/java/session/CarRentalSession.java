@@ -23,7 +23,7 @@ import rental.ReservationException;
 @Stateful
 public class CarRentalSession implements CarRentalSessionRemote {
 
-    @PersistenceContext
+    @PersistenceContext(unitName="CarRental-ejbPU")
     EntityManager em;
         
     private String renter;

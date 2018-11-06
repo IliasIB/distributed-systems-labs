@@ -16,12 +16,31 @@ public class Quote implements Serializable {
      * CONSTRUCTOR *
      ***************/
 
-    public Quote(String carRenter, Date start, Date end, String rentalCompany, String carType, double rentalPrice) {
+    public Quote() {
+
+    }
+
+    public void setStartDate(Date startDate) {
+        this.startDate = startDate;
+    }
+
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
+    }
+
+    public void setCarRenter(String carRenter) {
         this.carRenter = carRenter;
-        this.startDate = start;
-        this.endDate = end;
+    }
+
+    public void setRentalCompany(String rentalCompany) {
         this.rentalCompany = rentalCompany;
+    }
+
+    public void setCarType(String carType) {
         this.carType = carType;
+    }
+
+    public void setRentalPrice(double rentalPrice) {
         this.rentalPrice = rentalPrice;
     }
 

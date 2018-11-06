@@ -36,3 +36,17 @@ hs_err_pid*
 /session_2/CarRental-ejb/build/
 /session_2/CarRental-client/build/
 /session_2/CarRental-client/dist/
+/session_4/CarRental-ejb/EnterpriseApplication1/nbproject/private/
+/session_4/CarRental-ejb/EnterpriseApplication1/EnterpriseApplication1-war/nbproject/private/
+/session_4/CarRental-ejb/EnterpriseApplication1/EnterpriseApplication1-ejb/nbproject/private/
+/session_4/CarRental/nbproject/private/
+/session_4/CarRental-client/nbproject/private/
+/session_4/CarRental-lib/nbproject/private/
+/session_4/CarRental-ejb/nbproject/private/
+/session_4/CarRental-ejb/build/
+/session_4/CarRental-lib/dist/
+/session_4/CarRental-lib/build/
+/session_4/CarRental-client/build/
+/session_4/CarRental/build/
+/session_4/CarRental-ejb/dist/
+/session_4/CarRental-client/dist/

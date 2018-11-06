@@ -1,5 +1,6 @@
 package rental;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -8,46 +9,55 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.ejb.TransactionAttribute;
+import static javax.ejb.TransactionAttributeType.REQUIRED;
+import static javax.persistence.CascadeType.REMOVE;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
 
-public class CarRentalCompany {
 
+@Entity
+public class CarRentalCompany implements Serializable {
+
+    
     private static Logger logger = Logger.getLogger(CarRentalCompany.class.getName());
+   
     private String name;
     private List<Car> cars;
+    
     private Set<CarType> carTypes = new HashSet<CarType>();
-	private List<String> regions;
+    
+
+    private List<String> regions;
 
 	
     /***************
      * CONSTRUCTOR *
      ***************/
 
-    public CarRentalCompany(String name, List<String> regions, List<Car> cars) {
-        logger.log(Level.INFO, "<{0}> Starting up CRC {0} ...", name);
-        setName(name);
-        this.cars = cars;
-        setRegions(regions);
-        for (Car car : cars) {
-            carTypes.add(car.getType());
-        }
+    public CarRentalCompany() {
+
     }
 
     /********
      * NAME *
      ********/
     
+    @Id
     public String getName() {
-        return name;
+        return this.name;
     }
 
-    private void setName(String name) {
+   
+    public void setName(String name) {
         this.name = name;
     }
 
     /***********
      * Regions *
      **********/
-    private void setRegions(List<String> regions) {
+    public void setRegions(List<String> regions) {
         this.regions = regions;
     }
     
@@ -59,6 +69,8 @@ public class CarRentalCompany {
      * CAR TYPES *
      *************/
     
+
+    @OneToMany(mappedBy="carRentalCompany")
     public Collection<CarType> getAllTypes() {
         return carTypes;
     }
@@ -86,6 +98,9 @@ public class CarRentalCompany {
         return availableCarTypes;
     }
 
+    public void setTypes(Set<CarType> types){
+         this.carTypes = types;
+    }
     /*********
      * CARS *
      *********/
@@ -99,6 +114,16 @@ public class CarRentalCompany {
         throw new IllegalArgumentException("<" + name + "> No car with uid " + uid);
     }
 
+    public void setCars(List<Car> cars){
+        this.cars = cars;
+    }
+
+
+    @OneToMany(cascade=REMOVE, mappedBy="carRentalCompany")
+    public List<Car> getCars(){
+        return this.cars;
+    }
+    
     public Set<Car> getCars(CarType type) {
         Set<Car> out = new HashSet<Car>();
         for (Car car : cars) {
@@ -132,7 +157,6 @@ public class CarRentalCompany {
     /****************
      * RESERVATIONS *
      ****************/
-    
     public Quote createQuote(ReservationConstraints constraints, String guest)
             throws ReservationException {
         logger.log(Level.INFO, "<{0}> Creating tentative reservation for {1} with constraints {2}",
@@ -148,7 +172,14 @@ public class CarRentalCompany {
 
         double price = calculateRentalPrice(type.getRentalPricePerDay(), constraints.getStartDate(), constraints.getEndDate());
 
-        return new Quote(guest, constraints.getStartDate(), constraints.getEndDate(), getName(), constraints.getCarType(), price);
+        Quote quote = new Quote();
+        quote.setCarRenter(guest);
+        quote.setStartDate(constraints.getStartDate());
+        quote.setEndDate(constraints.getEndDate());
+        quote.setRentalCompany(getName());
+        quote.setCarType( constraints.getCarType());
+        quote.setRentalPrice(price);
+        return quote;
     }
 
     // Implementation can be subject to different pricing strategies
@@ -157,6 +188,7 @@ public class CarRentalCompany {
                 / (1000 * 60 * 60 * 24D));
     }
 
+    @TransactionAttribute(REQUIRED)
     public Reservation confirmQuote(Quote quote) throws ReservationException {
         logger.log(Level.INFO, "<{0}> Reservation of {1}", new Object[]{name, quote.toString()});
         List<Car> availableCars = getAvailableCars(quote.getCarType(), quote.getStartDate(), quote.getEndDate());
@@ -166,7 +198,10 @@ public class CarRentalCompany {
         }
         Car car = availableCars.get((int) (Math.random() * availableCars.size()));
 
-        Reservation res = new Reservation(quote, car.getId());
+        
+        Reservation res = new Reservation();
+        res.setQuote(quote);
+        res.setCarId(car.getId());
         car.addReservation(res);
         return res;
     }

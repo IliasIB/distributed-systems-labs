@@ -13,6 +13,7 @@ import static javax.ejb.TransactionAttributeType.REQUIRED;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+import javax.persistence.TemporalType;
 import rental.CarRentalCompany;
 import rental.CarType;
 import rental.Quote;
@@ -23,7 +24,7 @@ import rental.ReservationException;
 @Stateful
 public class CarRentalSession implements CarRentalSessionRemote {
 
-    @PersistenceContext
+    @PersistenceContext(unitName="CarRental-ejbPU")
     EntityManager em;
         
     private String renter;
@@ -32,7 +33,7 @@ public class CarRentalSession implements CarRentalSessionRemote {
     @Override
     public Set<String> getAllRentalCompanies() {
         Query query = em.createQuery("SELECT e.name FROM CarRentalCompany e");
-        return (Set<String>) query.getResultList();
+        return (Set<String>) new HashSet<>(query.getResultList());
     }
     
     @Override
@@ -49,15 +50,24 @@ public class CarRentalSession implements CarRentalSessionRemote {
     }
 
     @Override
-    public Quote createQuote(String company, ReservationConstraints constraints) throws ReservationException {
-        try {
-            CarRentalCompany rental = em.find(CarRentalCompany.class, company);
-            Quote out = rental.createQuote(constraints, renter);
-            quotes.add(out);
-            return out;
-        } catch(Exception e) {
-            throw new ReservationException(e);
+    public Quote createQuote(String name, ReservationConstraints constraints) throws ReservationException {
+        Query query = em.createQuery(
+        "SELECT company FROM CarRentalCompany company");
+        List<CarRentalCompany> companies = new ArrayList<>(query.getResultList());
+        for (CarRentalCompany rental : companies){
+            try{
+                Quote out = rental.createQuote(constraints, name);
+                quotes.add(out);
+                return out;
+            }
+            catch(ReservationException e){
+
+            }
+            catch(IllegalArgumentException e){
+
+            }
         }
+        throw new ReservationException("No cmpanies satisfied with request");
     }
 
     @Override
@@ -92,32 +102,27 @@ public class CarRentalSession implements CarRentalSessionRemote {
     }
     
      @Override
-    public String getCheapestCarType(Date start, Date end, String region) {
-
-        List<CarRentalCompany> regionalCompanies = new ArrayList<>();
+    public String getCheapestCarType(Date start, Date end, String region) {                
         Query query = em.createQuery(
-            "SELECT comp FROM CarRentalCompany comp ");
-        List<CarRentalCompany> rentals = (List<CarRentalCompany>) query.getResultList();
-        for (CarRentalCompany rental : rentals) {
-            if ( rental.getRegions().contains(region)){
-                regionalCompanies.add(rental);
-            }
+            "SELECT cars.type.name FROM CarRentalCompany comp, Car cars "
+                + "WHERE cars.company = comp.name AND "
+                + "NOT EXISTS ("
+                    + "SELECT cars FROM Reservation res "
+                    + "WHERE res.car = cars AND "
+                    + "((res.startDate>=:start AND res.startDate<=:end)"
+                    + "OR (res.endDate>=:start AND res.endDate<=:end))) "
+                + "AND :region_s MEMBER OF comp.regions "
+                + "ORDER BY cars.type.rentalPricePerDay ASC")
+            .setParameter("start", start, TemporalType.DATE)
+            .setParameter("end", end, TemporalType.DATE)
+            .setParameter("region_s", region);
+        List<String> types = (List<String>) query.getResultList();
+        if (types.size() > 0){
+            return types.get(0);
         }
-
-        List<CarType> availableCarTypes = new ArrayList<>();
-        for (CarRentalCompany company: regionalCompanies){
-            availableCarTypes.addAll(company.getAvailableCarTypes(start, end));
+        else{
+            return null;
         }
-
-        double cheapestPrice = Double.MAX_VALUE;
-        String cheapestCarType = null;
-        for (CarType carType : availableCarTypes){
-            if (carType.getRentalPricePerDay() < cheapestPrice){
-                cheapestCarType = carType.getName();
-                cheapestPrice = carType.getRentalPricePerDay();
-            }
-        }
-        return cheapestCarType;
     }
     
 

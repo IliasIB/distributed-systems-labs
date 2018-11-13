@@ -2,14 +2,15 @@ package rental;
 
 import java.io.Serializable;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Set;
+import static javax.persistence.CascadeType.PERSIST;
 import static javax.persistence.CascadeType.REMOVE;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
-
 
 @Entity
 public class Car implements Serializable{
@@ -35,6 +36,7 @@ public class Car implements Serializable{
      ******/
     
     @Id
+    @GeneratedValue(strategy=GenerationType.AUTO)
     public int getId() {
     	return id;
     }
@@ -79,18 +81,21 @@ public class Car implements Serializable{
         reservations.remove(reservation);
     }
 
-    @OneToMany(cascade=REMOVE, mappedBy="car")
+    @OneToMany(cascade={REMOVE, PERSIST})
     public Set<Reservation> getReservations() {
         return reservations;
     }
 
-    @ManyToOne
     public String getCompany() {
         return company;
     }
     
     public void setCompany(String company) {
         this.company = company;
+    }
+
+    public void setReservations(Set<Reservation> reservations) {
+        this.reservations = reservations;
     }
     
     

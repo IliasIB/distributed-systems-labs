@@ -12,7 +12,10 @@ import java.util.logging.Logger;
 import javax.ejb.TransactionAttribute;
 import static javax.ejb.TransactionAttributeType.REQUIRED;
 import static javax.persistence.CascadeType.REMOVE;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 
@@ -25,7 +28,6 @@ public class CarRentalCompany implements Serializable {
    
     private String name;
     private List<Car> cars;
-    
     private Set<CarType> carTypes = new HashSet<CarType>();
     
 
@@ -53,6 +55,7 @@ public class CarRentalCompany implements Serializable {
     public void setName(String name) {
         this.name = name;
     }
+    
 
     /***********
      * Regions *
@@ -61,6 +64,7 @@ public class CarRentalCompany implements Serializable {
         this.regions = regions;
     }
     
+    @ElementCollection
     public List<String> getRegions() {
         return this.regions;
     }
@@ -70,9 +74,13 @@ public class CarRentalCompany implements Serializable {
      *************/
     
 
-    @OneToMany(mappedBy="carRentalCompany")
+    @OneToMany
     public Collection<CarType> getAllTypes() {
         return carTypes;
+    }
+    
+    public void setAllTypes(Collection<CarType> carTypes){
+        this.carTypes = new HashSet<>(carTypes);
     }
 
     public CarType getType(String carTypeName) {
@@ -119,7 +127,7 @@ public class CarRentalCompany implements Serializable {
     }
 
 
-    @OneToMany(cascade=REMOVE, mappedBy="carRentalCompany")
+    @OneToMany(cascade=REMOVE)
     public List<Car> getCars(){
         return this.cars;
     }
@@ -202,6 +210,7 @@ public class CarRentalCompany implements Serializable {
         Reservation res = new Reservation();
         res.setQuote(quote);
         res.setCarId(car.getId());
+        res.setCar(car);
         car.addReservation(res);
         return res;
     }
@@ -222,4 +231,14 @@ public class CarRentalCompany implements Serializable {
         }
         return out;
     }
+
+    public static void setLogger(Logger logger) {
+        CarRentalCompany.logger = logger;
+    }
+
+    public void setCarTypes(Set<CarType> carTypes) {
+        this.carTypes = carTypes;
+    }
+    
+    
 }

@@ -102,7 +102,7 @@ public class Main extends AbstractTestManagement<CarRentalSessionRemote, Manager
     public void addQuoteToSession(CarRentalSessionRemote session, String name,
             Date start, Date end, String carType, String region) throws Exception {
         ReservationConstraints constraints = new ReservationConstraints(start, end, carType, region);
-        session.createQuote(region, constraints);
+        session.createQuote(name, constraints);
     }
 
     /**
@@ -146,7 +146,7 @@ public class Main extends AbstractTestManagement<CarRentalSessionRemote, Manager
      */
     @Override
     public int getNumberOfReservationsForCarType(ManagerSessionRemote ms, String carRentalName, String carType) throws Exception {
-        return ms.getNumberOfReservations(carType, carType);
+        return ms.getNumberOfReservations(carRentalName, carType);
     }   
       
     

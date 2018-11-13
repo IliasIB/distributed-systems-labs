@@ -1,7 +1,6 @@
 package rental;
 
 import java.io.Serializable;
-import java.util.List;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 
@@ -9,7 +8,7 @@ import javax.persistence.Id;
 public class CarType implements Serializable {
     
 
-    
+    @Id
     private String name;
     private int nbOfSeats;
     private boolean smokingAllowed;
@@ -43,7 +42,6 @@ public class CarType implements Serializable {
         this.trunkSpace = trunkSpace;
     }
 
-    @Id
     public String getName() {
         return name;
     }

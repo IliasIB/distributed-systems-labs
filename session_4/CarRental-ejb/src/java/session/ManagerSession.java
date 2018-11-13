@@ -3,6 +3,7 @@ package session;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -19,6 +20,7 @@ import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.Stateless;
+import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
@@ -30,7 +32,7 @@ import rental.Reservation;
 @Stateless
 public class ManagerSession implements ManagerSessionRemote {
     
-    @PersistenceContext
+    @PersistenceContext(unitName="CarRental-ejbPU")
     EntityManager em;
     
     
@@ -69,9 +71,9 @@ public class ManagerSession implements ManagerSessionRemote {
     public int getNumberOfReservations(String company, String type, int id) {
 
         Query query = em.createQuery(
-            "SELECT car.reservations FROM Car car "
-                + "WHERE company=:company AND car.type=:cartype AND car.id=:id")             
-        .setParameter("company", company)
+            "SELECT COUNT(res) FROM Car cars JOIN cars.reservations as res "
+                + "WHERE cars.company=:comp AND cars.type=:cartype AND cars.id=:id")             
+        .setParameter("comp", company)
         .setParameter("id", id)               
         .setParameter("cartype", type);      
                 
@@ -81,98 +83,71 @@ public class ManagerSession implements ManagerSessionRemote {
     @Override
     public Set<String> getBestClients(){
          Query query = em.createQuery(
-            "SELECT res FROM Reservation res ");
-        List<Reservation> reservations = (List<Reservation>) query.getResultList();
-        
-        Map<String, Integer> customerCount = new HashMap<String, Integer>();
-        for (Reservation reservation : reservations) {
-            String customerName = reservation.getCarRenter();
-            if (customerCount.get(customerName) == null) {
-                customerCount.put(customerName, 0);
-            }
-            else
-                customerCount.put(customerName, customerCount.get(customerName) + 1);
+            "SELECT res.carRenter, COUNT(res.carRenter) FROM Reservation res "
+                    + "GROUP BY res.carRenter "
+                    + "ORDER BY COUNT(res.carRenter) DESC");
+       List<Object[]> customers = (List<Object[]>)query.getResultList();
+       Set<String> bestCustomers = new HashSet<>();
+       long startValue = -1;
+        if (customers.size() > 0){
+            for (Object[] customer : customers) {
+                if (startValue == -1){
+                    startValue = (long) customer[1];
+                }
+                if ((long) customer[1] == startValue){
+                    bestCustomers.add((String) customer[0]);
+                }else{
+                    break;
+                }
+            
+           }
+            return bestCustomers;
         }
-
-        List<Integer> reservationAmounts = new ArrayList<Integer>(customerCount.values());
-        Set<String> bestCustomers = new HashSet<>();
-        Collections.sort(reservationAmounts);
-        int highestAmount = reservationAmounts.get(reservationAmounts.size() - 1);
-
-        for (Map.Entry<String, Integer> customer : customerCount.entrySet())  {
-            if (customer.getValue() == highestAmount){
-                bestCustomers.add(customer.getKey());
-            }
+        else{
+            return null;
         }
-        return bestCustomers;
     }
 
      @Override
      public CarType getMostPopularCarTypeIn(String carRentalCompanyName, int year){
-         Query query = em.createQuery(
-            "SELECT res FROM Reservation res");
-        List<Reservation> reservations = (List<Reservation>) query.getResultList();
-
-        List<Reservation> reservationsInYear = new ArrayList<>();
-        for (Reservation reservation : reservations){
-            Calendar calendar = new GregorianCalendar();
-            calendar.setTime(reservation.getStartDate());
-            int reservationYear = calendar.get(Calendar.YEAR);
-            if (reservationYear == year) {
-                reservationsInYear.add(reservation);
-            }
-        }
-
-        Map<CarType,Integer> carTypeResAmount = new HashMap<>();
-        for (Reservation reservation : reservationsInYear){
-            CarType carType = em.find(CarType.class, reservation.getCarType());
-            if (carTypeResAmount.get(carType) == null){
-                carTypeResAmount.put(carType,1);
-            }
-            else{
-                carTypeResAmount.put(carType, carTypeResAmount.get(carType) + 1);
-            }
-        }
+        Query query = em.createQuery(
+            "SELECT cars.type "
+                    + "FROM Reservation res, Car cars, CarRentalCompany comp "
+                    + "WHERE FUNCTION('YEAR' ,res.startDate)=:year "
+                    + "AND res.car = cars AND cars.company = comp.name "
+                    + "AND comp.name=:company "
+                    + "GROUP BY cars.type"
+                    + " ORDER BY COUNT(res) DESC")
+            .setParameter("year", year)
+            .setParameter("company", carRentalCompanyName);
         
-        List<Integer> reservationAmounts = new ArrayList<Integer>(carTypeResAmount.values());
-        Collections.sort(reservationAmounts);
-        int highestAmount = reservationAmounts.get(reservationAmounts.size() - 1);
-
-        for (Map.Entry<CarType, Integer> carType : carTypeResAmount.entrySet())  {
-            if (carType.getValue() == highestAmount){
-                return carType.getKey();
-            }
+        List<CarType> types = (List<CarType>) query.getResultList();
+        if (types.size() > 0){
+            return types.get(0);
         }
-        return null;
+        else{
+            return null;
+        }
      }
 
     @Override
     public String getCheapestCarType(Date start, Date end, String region) {
-
-        List<CarRentalCompany> regionalCompanies = new ArrayList<>();
         Query query = em.createQuery(
-            "SELECT comp FROM CarRentalCompany comp ");
-        List<CarRentalCompany> rentals = (List<CarRentalCompany>) query.getResultList();
-        for (CarRentalCompany rental : rentals) {
-            if ( rental.getRegions().contains(region)){
-                regionalCompanies.add(rental);
-            }
+            "SELECT cars.type.name FROM CarRentalCompany comp, Car cars, Reservation res "
+                + "WHERE res.carId = cars.id AND cars.company = comp.name AND "
+                    + "res.startDate=:start AND res.endDate=:end AND :region_s IN(comp.regions) "
+                    + "ORDER BY cars.type.rentalPricePerDay ASC")
+                .setParameter("start", start)
+                .setParameter("end", end)
+                .setParameter("region_s", region);
+        
+        List<CarType> types = (List<CarType>) query.getResultList();
+        if (types.size() > 0){
+            return types.get(0).getName();
         }
-
-        List<CarType> availableCarTypes = new ArrayList<>();
-        for (CarRentalCompany company: regionalCompanies){
-            availableCarTypes.addAll(company.getAvailableCarTypes(start, end));
+        else{
+            return null;
         }
-
-        double cheapestPrice = Double.MAX_VALUE;
-        String cheapestCarType = null;
-        for (CarType carType : availableCarTypes){
-            if (carType.getRentalPricePerDay() < cheapestPrice){
-                cheapestCarType = carType.getName();
-                cheapestPrice = carType.getRentalPricePerDay();
-            }
-        }
-        return cheapestCarType;
     }
 
     public int getNumberOfReservationsBy(String clientName) throws Exception {
@@ -194,30 +169,33 @@ public class ManagerSession implements ManagerSessionRemote {
     public int getNumberOfReservations(String company, String type) {
 
         Query query = em.createQuery(
-            "SELECT car.reservations FROM Car car "
-                + "WHERE company=:company AND car.type=:cartype")             
-        .setParameter("company", company)             
-        .setParameter("cartype", type);      
-                
-        return ((Set<CarType>) query.getResultList()).size();
+            "SELECT res FROM Car cars JOIN cars.reservations AS res "
+                + "WHERE cars.company=:companyName AND cars.type.name=:cartype")             
+        .setParameter("companyName", company)             
+        .setParameter("cartype", type);
+        return ((Set<CarType>) new HashSet<>(query.getResultList())).size();
     }
     
     public void addCompany(CarRentalCompany carRentalCompany){
         em.persist(carRentalCompany);
     }
     
-    public void addCarTypes(Set<CarType> carTypes, CarRentalCompany carRentalCompany){
-        carRentalCompany.setTypes(carTypes);
-        em.persist(carTypes);
-        
+    public void addCarTypes(List<CarType> carTypes, CarRentalCompany carRentalCompany){
+        carRentalCompany.setAllTypes(carTypes);
+        for (CarType carType : carTypes){
+            CarType carTypeFind = em.find(CarType.class, carType.getName());
+            if (carTypeFind == null){
+                em.persist(carType);
+            }
+        }
     }
         
     public void addCars(List<Car> cars, CarRentalCompany carRentalCompany){
         for (Car car : cars){
             car.setCompany(carRentalCompany.getName());
+            em.persist(car);
         }
-        carRentalCompany.setCars(cars);
-        em.persist(cars);
+        carRentalCompany.setCars(cars);        
     }
     
     @Override
@@ -230,7 +208,7 @@ public class ManagerSession implements ManagerSessionRemote {
             company.setRegions(data.regions);
             company.setName(data.name);
             
-            Set<CarType> types = new HashSet<>();
+            List<CarType> types = new ArrayList<>();
             for (Car car : data.cars){
                 types.add(car.getType());
             }
@@ -286,7 +264,6 @@ public class ManagerSession implements ManagerSessionRemote {
                     //create N new cars with given type, where N is the 5th field
                     for (int i = Integer.parseInt(csvReader.nextToken()); i > 0; i--) {
                         Car car = new Car();
-                        car.setId(nextuid++);
                         car.setType(type);
                         out.cars.add(car);
                     }        

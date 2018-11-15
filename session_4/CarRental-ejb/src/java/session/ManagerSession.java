@@ -24,6 +24,7 @@ import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
+import javax.persistence.TemporalType;
 import rental.Car;
 import rental.CarRentalCompany;
 import rental.CarType;
@@ -133,17 +134,21 @@ public class ManagerSession implements ManagerSessionRemote {
     @Override
     public String getCheapestCarType(Date start, Date end, String region) {
         Query query = em.createQuery(
-            "SELECT cars.type.name FROM CarRentalCompany comp, Car cars, Reservation res "
-                + "WHERE res.carId = cars.id AND cars.company = comp.name AND "
-                    + "res.startDate=:start AND res.endDate=:end AND :region_s IN(comp.regions) "
-                    + "ORDER BY cars.type.rentalPricePerDay ASC")
-                .setParameter("start", start)
-                .setParameter("end", end)
-                .setParameter("region_s", region);
-        
-        List<CarType> types = (List<CarType>) query.getResultList();
+            "SELECT cars.type.name FROM CarRentalCompany comp, Car cars "
+                + "WHERE cars.company = comp.name AND "
+                + "NOT EXISTS ("
+                    + "SELECT cars FROM Reservation res "
+                    + "WHERE res.car = cars AND "
+                    + "((res.startDate>=:start AND res.startDate<=:end)"
+                    + "OR (res.endDate>=:start AND res.endDate<=:end))) "
+                + "AND :region_s MEMBER OF comp.regions "
+                + "ORDER BY cars.type.rentalPricePerDay ASC")
+            .setParameter("start", start, TemporalType.DATE)
+            .setParameter("end", end, TemporalType.DATE)
+            .setParameter("region_s", region);
+        List<String> types = (List<String>) query.getResultList();
         if (types.size() > 0){
-            return types.get(0).getName();
+            return types.get(0);
         }
         else{
             return null;
@@ -183,10 +188,7 @@ public class ManagerSession implements ManagerSessionRemote {
     public void addCarTypes(List<CarType> carTypes, CarRentalCompany carRentalCompany){
         carRentalCompany.setAllTypes(carTypes);
         for (CarType carType : carTypes){
-            CarType carTypeFind = em.find(CarType.class, carType.getName());
-            if (carTypeFind == null){
-                em.persist(carType);
-            }
+            em.persist(carType);
         }
     }
         
@@ -210,7 +212,9 @@ public class ManagerSession implements ManagerSessionRemote {
             
             List<CarType> types = new ArrayList<>();
             for (Car car : data.cars){
-                types.add(car.getType());
+                CarType type = car.getType();
+                type.setCompany(company);
+                types.add(type);
             }
             
             this.addCarTypes(types, company);

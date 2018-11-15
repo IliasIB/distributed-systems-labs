@@ -32,7 +32,7 @@ public class Reservation extends Quote implements Serializable {
      ******/
     
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
     public int getId() {
     	return id;
     }
@@ -47,7 +47,7 @@ public class Reservation extends Quote implements Serializable {
     }
     
     public void setCarId(int carId) {
-        this.id = carId;
+        this.carId = carId;
     }
     
     

@@ -80,7 +80,6 @@ public class CarRentalSession implements CarRentalSessionRemote {
     public List<Reservation> confirmQuotes() throws ReservationException {
         List<Reservation> done = new LinkedList<Reservation>();
 
-        String i = "Before loop";
         try {
             for (Quote quote : quotes) {
                 CarRentalCompany rental = em.find(CarRentalCompany.class, quote.getRentalCompany());
@@ -89,7 +88,6 @@ public class CarRentalSession implements CarRentalSessionRemote {
                 em.persist(reservation);
             }
         } catch (Exception e) {
-            System.out.println(i);
             throw new EJBException(e);
         }
         return done;

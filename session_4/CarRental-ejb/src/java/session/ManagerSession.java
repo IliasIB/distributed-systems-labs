@@ -84,29 +84,14 @@ public class ManagerSession implements ManagerSessionRemote {
     @Override
     public Set<String> getBestClients(){
          Query query = em.createQuery(
-            "SELECT res.carRenter, COUNT(res.carRenter) FROM Reservation res "
+            "SELECT res.carRenter FROM Reservation res "
                     + "GROUP BY res.carRenter "
-                    + "ORDER BY COUNT(res.carRenter) DESC");
-       List<Object[]> customers = (List<Object[]>)query.getResultList();
-       Set<String> bestCustomers = new HashSet<>();
-       long startValue = -1;
-        if (customers.size() > 0){
-            for (Object[] customer : customers) {
-                if (startValue == -1){
-                    startValue = (long) customer[1];
-                }
-                if ((long) customer[1] == startValue){
-                    bestCustomers.add((String) customer[0]);
-                }else{
-                    break;
-                }
-            
-           }
-            return bestCustomers;
-        }
-        else{
-            return null;
-        }
+                    +   "HAVING COUNT(res.carRenter) >= ALL"
+                    +       "(SELECT COUNT(res2.carRenter) "
+                    +       "FROM Reservation res2 "
+                    +       "GROUP BY res2.carRenter)");
+       Set<String> customers = new HashSet<>(query.getResultList());
+       return customers;
     }
 
      @Override
@@ -155,18 +140,14 @@ public class ManagerSession implements ManagerSessionRemote {
         }
     }
 
+    @Override
     public int getNumberOfReservationsBy(String clientName) throws Exception {
          Query query = em.createQuery(
-            "SELECT res FROM Reservation res");
-        List<Reservation> reservations = (List<Reservation>) query.getResultList();
-
-        int count = 0;
-        for (Reservation reservation : reservations) {
-            if (reservation.getCarRenter().equals(clientName)) {
-                count += 1;
-            }
-        }
-        return count;
+            "SELECT res.carRenter "
+                    + "FROM Reservation res "
+                    + "WHERE res.carRenter=:clientName ")
+                 .setParameter("clientName", clientName);
+        return ((Set<CarType>) query.getResultList()).size();
     }
         
         

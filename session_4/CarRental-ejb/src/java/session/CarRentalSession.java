@@ -80,14 +80,16 @@ public class CarRentalSession implements CarRentalSessionRemote {
     public List<Reservation> confirmQuotes() throws ReservationException {
         List<Reservation> done = new LinkedList<Reservation>();
 
+        String i = "Before loop";
         try {
             for (Quote quote : quotes) {
                 CarRentalCompany rental = em.find(CarRentalCompany.class, quote.getRentalCompany());
-                
-                done.add(rental.confirmQuote(quote));
-
+                Reservation reservation = rental.confirmQuote(quote);
+                done.add(reservation);
+                em.persist(reservation);
             }
         } catch (Exception e) {
+            System.out.println(i);
             throw new EJBException(e);
         }
         return done;
@@ -110,7 +112,8 @@ public class CarRentalSession implements CarRentalSessionRemote {
                     + "SELECT cars FROM Reservation res "
                     + "WHERE res.car = cars AND "
                     + "((res.startDate>=:start AND res.startDate<=:end)"
-                    + "OR (res.endDate>=:start AND res.endDate<=:end))) "
+                    + "OR (res.endDate>=:start AND res.endDate<=:end)) "
+                    + "AND :region_s MEMBER OF comp.regions) "
                 + "AND :region_s MEMBER OF comp.regions "
                 + "ORDER BY cars.type.rentalPricePerDay ASC")
             .setParameter("start", start, TemporalType.DATE)

@@ -1,8 +1,20 @@
 package ds.gae.entities;
 
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+
+import com.google.appengine.api.datastore.Key;
+
+@Entity
 public class CarType {
-    
+
+	@Id
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
+	private Key id;
     private String name;
+    private String companyName;
     private int nbOfSeats;
     private boolean smokingAllowed;
     private double rentalPricePerDay;
@@ -74,5 +86,21 @@ public class CarType {
 		} else if (!name.equals(other.name))
 			return false;
 		return true;
+	}
+
+	public String getCompany() {
+		return companyName;
+	}
+
+	public void setCompany(String companyName) {
+		this.companyName = companyName;
+	}
+
+	public Key getId() {
+		return id;
+	}
+
+	public void setId(Key id) {
+		this.id = id;
 	}
 }

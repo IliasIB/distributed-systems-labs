@@ -9,10 +9,13 @@ import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.persistence.EntityManager;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
-import ds.gae.CarRentalModel;
+import com.google.appengine.api.datastore.Entity;
+
+import ds.gae.EMF;
 import ds.gae.entities.Car;
 import ds.gae.entities.CarRentalCompany;
 import ds.gae.entities.CarType;
@@ -34,7 +37,18 @@ public class CarRentalServletContextListener implements ServletContextListener {
 		// If the Hertz car rental company is in the datastore, we assume the dummy data is available
 
 		// FIXME: use persistence instead
-		return CarRentalModel.get().CRCS.containsKey("Hertz");
+		EntityManager em =
+				EMF.get().createEntityManager(); 
+	
+		boolean available = false;
+		try {
+			if (em.find(CarRentalCompany.class, "Hertz") != null) {
+				available = true;
+			}
+		} finally {
+			em.close();
+		}
+		return available;
 
 	}
 	
@@ -48,10 +62,16 @@ public class CarRentalServletContextListener implements ServletContextListener {
         try {
         	
             Set<Car> cars = loadData(name, datafile);
-            CarRentalCompany company = new CarRentalCompany(name, cars);
-            
-    		// FIXME: use persistence instead
-            CarRentalModel.get().CRCS.put(name, company);
+            Entity newCompany = new Entity("CarRentalCompany", name);
+            CarRentalCompany company = new CarRentalCompany(newCompany.getKey(), cars);
+            EntityManager em =
+					EMF.get().createEntityManager(); 
+		
+			try {
+				em.persist(company);
+			} finally {
+				em.close();
+			}
 
         } catch (NumberFormatException ex) {
             Logger.getLogger(CarRentalServletContextListener.class.getName()).log(Level.SEVERE, "bad file", ex);
@@ -64,7 +84,6 @@ public class CarRentalServletContextListener implements ServletContextListener {
 		// FIXME: adapt the implementation of this method to your entity structure
 		
 		Set<Car> cars = new HashSet<Car>();
-		int carId = 1;
 
 		//open file from jar
 		BufferedReader in = new BufferedReader(new InputStreamReader(CarRentalServletContextListener.class.getClassLoader().getResourceAsStream(datafile)));
@@ -86,7 +105,7 @@ public class CarRentalServletContextListener implements ServletContextListener {
 					Boolean.parseBoolean(csvReader.nextToken()));
 			//create N new cars with given type, where N is the 5th field
 			for (int i = Integer.parseInt(csvReader.nextToken()); i > 0; i--) {
-				cars.add(new Car(carId++, type));
+				cars.add(new Car(type));
 			}
 		}
 

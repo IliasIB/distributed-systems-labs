@@ -11,13 +11,26 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.persistence.CascadeType;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
+
+import com.google.appengine.api.datastore.Key;
+
 import ds.gae.ReservationException;
 
+@Entity
 public class CarRentalCompany {
 
 	private static Logger logger = Logger.getLogger(CarRentalCompany.class.getName());
 	
-	private String name;
+	@Id
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
+	private Key name;
+	@OneToMany(cascade=CascadeType.PERSIST)
 	private Set<Car> cars;
 	private Map<String,CarType> carTypes = new HashMap<String, CarType>();
 
@@ -25,7 +38,7 @@ public class CarRentalCompany {
 	 * CONSTRUCTOR *
 	 ***************/
 
-	public CarRentalCompany(String name, Set<Car> cars) {
+	public CarRentalCompany(Key name, Set<Car> cars) {
 		logger.log(Level.INFO, "<{0}> Car Rental Company {0} starting up...", name);
 		setName(name);
 		this.cars = cars;
@@ -37,11 +50,11 @@ public class CarRentalCompany {
 	 * NAME *
 	 ********/
 
-	public String getName() {
+	public Key getName() {
 		return name;
 	}
 
-	private void setName(String name) {
+	private void setName(Key name) {
 		this.name = name;
 	}
 
@@ -82,7 +95,7 @@ public class CarRentalCompany {
 	
 	private Car getCar(int uid) {
 		for (Car car : cars) {
-			if (car.getId() == uid)
+			if (car.getId().getId() == uid)
 				return car;
 		}
 		throw new IllegalArgumentException("<" + name + "> No car with uid " + uid);
@@ -119,7 +132,7 @@ public class CarRentalCompany {
 		
 		double price = calculateRentalPrice(type.getRentalPricePerDay(),constraints.getStartDate(), constraints.getEndDate());
 		
-		return new Quote(client, constraints.getStartDate(), constraints.getEndDate(), getName(), constraints.getCarType(), price);
+		return new Quote(client, constraints.getStartDate(), constraints.getEndDate(), getName().getName(), constraints.getCarType(), price);
 	}
 
 	// Implementation can be subject to different pricing strategies
@@ -136,7 +149,7 @@ public class CarRentalCompany {
 	                + " are unavailable from " + quote.getStartDate() + " to " + quote.getEndDate());
 		Car car = availableCars.get((int)(Math.random()*availableCars.size()));
 		
-		Reservation res = new Reservation(quote, car.getId());
+		Reservation res = new Reservation(quote, (int)car.getId().getId());
 		car.addReservation(res);
 		return res;
 	}

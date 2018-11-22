@@ -163,21 +163,28 @@ public class CarRentalModel {
 		EntityManager em =
 				EMF.get().createEntityManager(); 
 	
-    	for (Quote q : quotes) {
-			Reservation res = confirmQuote(q);
-			EntityTransaction tx = em.getTransaction(); 
-			tx.begin();
-			
-			try {
+		EntityTransaction tx = em.getTransaction(); 
+		tx.begin();
+		
+		try {
+	    	for (Quote q : quotes) {
+				Reservation res = confirmQuote(q);
+	
 				em.persist(res);
-				tx.commit(); } 
-			finally {
-				if (tx.isActive()) {
-					tx.rollback();
-				}
-				em.close();
+				
+				reservations.add(res);
+				
 			}
-			reservations.add(res);
+			tx.commit();  
+		}
+		finally {
+
+			if (tx.isActive()) {
+				tx.rollback();
+				reservations.clear();
+			}
+			em.close();
+			
 		}
     	return reservations;
     }

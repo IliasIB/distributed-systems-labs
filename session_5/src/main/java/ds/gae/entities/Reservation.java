@@ -1,5 +1,7 @@
 package ds.gae.entities;
 
+import java.util.Date;
+
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -10,12 +12,24 @@ import com.google.appengine.api.datastore.Key;
 @Entity
 public class Reservation extends Quote {
 
-	@Id
-	@GeneratedValue(strategy=GenerationType.IDENTITY)
 	private Key id;
     private int carId;
     
-    /***************
+	@Id
+	@GeneratedValue(strategy=GenerationType.IDENTITY)
+    public Key getId() {
+		return id;
+	}
+
+	public void setId(Key id) {
+		this.id = id;
+	}
+
+	public void setCarId(int carId) {
+		this.carId = carId;
+	}
+
+	/***************
 	 * CONSTRUCTOR *
 	 ***************/
 
@@ -32,6 +46,60 @@ public class Reservation extends Quote {
     public int getCarId() {
     	return carId;
     }
+    
+    @Override
+    public Date getStartDate() {
+        return super.getStartDate();
+    }
+
+    @Override
+    public Date getEndDate() {
+        return super.getEndDate();
+    }
+
+    @Override
+    public String getCarRenter() {
+        return super.getCarRenter();
+    }
+
+    @Override
+    public String getRentalCompany() {
+        return super.getRentalCompany();
+    }
+
+    @Override
+    public double getRentalPrice() {
+        return super.getRentalPrice();
+    }
+    
+    @Override
+    public String getCarType() {
+		return super.getCarType();
+	}
+    
+    public void setStartDate(Date startDate) {
+		super.setStartDate(startDate);
+	}
+
+	public void setEndDate(Date endDate) {
+		super.setEndDate(endDate);
+	}
+
+	public void setCarRenter(String carRenter) {
+		super.setCarRenter(carRenter);
+	}
+
+	public void setRentalCompany(String rentalCompany) {
+		super.setRentalCompany(rentalCompany);
+	}
+
+	public void setCarType(String carType) {
+		super.setCarType(carType);
+	}
+
+	public void setRentalPrice(double rentalPrice) {
+		super.setRentalPrice(rentalPrice);
+	}
     
     /*************
      * TO STRING *

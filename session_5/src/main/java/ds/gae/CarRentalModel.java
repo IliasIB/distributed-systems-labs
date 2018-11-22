@@ -7,7 +7,10 @@ import java.util.List;
 import java.util.Set;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityTransaction;
 import javax.persistence.TypedQuery;
+
+import com.google.appengine.api.datastore.Key;
 
 import ds.gae.entities.Car;
 import ds.gae.entities.CarRentalCompany;
@@ -40,7 +43,7 @@ public class CarRentalModel {
 		
 		try {
 			TypedQuery<String> query =
-					em.createQuery("cType.name FROM CarType cType", String.class);
+					em.createQuery("SELECT cType.name FROM CarType cType ", String.class);
 			List<String> names = query.getResultList();
 			return new HashSet<>(names); 
 		} finally {
@@ -59,10 +62,14 @@ public class CarRentalModel {
 				EMF.get().createEntityManager(); 
 		
 		try {
-			TypedQuery<String> query =
-					em.createQuery("comp.name FROM Company comp", String.class);
-			List<String> names = query.getResultList();
-			return new HashSet<>(names); 
+			TypedQuery<Key> query =
+					em.createQuery("SELECT comp.name FROM CarRentalCompany comp ", Key.class);
+			List<Key> names = query.getResultList();
+			List<String> realNames = new ArrayList<>();
+			for (Key name : names) {
+				realNames.add(name.getName());
+			}
+			return new HashSet<>(realNames); 
 		} finally {
 			em.close(); 
 	
@@ -123,10 +130,10 @@ public class CarRentalModel {
 	
 		try {
 		TypedQuery<CarRentalCompany> query =
-				em.createQuery("comp FROM Company comp" 
+				em.createQuery("SELECT comp FROM CarRentalCompany comp " 
 						+ "WHERE comp.name=:quoteN",
 						CarRentalCompany.class)
-				.setParameter("quoteN", q.getCarRenter());
+				.setParameter("quoteN", q.getRentalCompany());
 		List<CarRentalCompany> comps = query.getResultList();
 		CarRentalCompany crc = comps.get(0);
 
@@ -139,7 +146,7 @@ public class CarRentalModel {
     }
 
 	
-    /**
+	/**
 	 * Confirm the given list of quotes
 	 * 
 	 * @param 	quotes 
@@ -152,10 +159,25 @@ public class CarRentalModel {
 	 */
     public List<Reservation> confirmQuotes(List<Quote> quotes) throws ReservationException {    	
 		List<Reservation> reservations = new ArrayList<>();
+
+		EntityManager em =
+				EMF.get().createEntityManager(); 
+	
     	for (Quote q : quotes) {
 			Reservation res = confirmQuote(q);
-			reservations.add(res);
+			EntityTransaction tx = em.getTransaction(); 
+			tx.begin();
 			
+			try {
+				em.persist(res);
+				tx.commit(); } 
+			finally {
+				if (tx.isActive()) {
+					tx.rollback();
+				}
+				em.close();
+			}
+			reservations.add(res);
 		}
     	return reservations;
     }
@@ -174,8 +196,8 @@ public class CarRentalModel {
 	
 		try {
 			TypedQuery<Reservation> query =
-				em.createQuery("res FROM Reservation res, CarRentalCompany comp, Car c " 
-						+ "WHERE comp.name=res.rentalCompany AND res.carRenter=:renter",
+				em.createQuery("SELECT res FROM Reservation res " 
+						+ "WHERE res.carRenter=:renter",
 						Reservation.class)
 				.setParameter("renter", renter);
 	
@@ -202,8 +224,8 @@ public class CarRentalModel {
 	
 		try {
 			TypedQuery<CarType> query =
-				em.createQuery("cType FROM CarType cType" 
-						+ "WHERE cTye.companyName=compName",
+				em.createQuery("SELECT cType FROM CarType cType " 
+						+ "WHERE cType.companyName=:compName",
 						CarType.class)
 				.setParameter("compName",crcName);
 	
@@ -228,7 +250,7 @@ public class CarRentalModel {
     public Collection<Integer> getCarIdsByCarType(String crcName, CarType carType) {
     	Collection<Integer> out = new ArrayList<Integer>();
     	for (Car c : getCarsByCarType(crcName, carType)) {
-    		out.add((int)c.getId().getId());
+    		out.add(c.getFakeId());
     	}
     	return out;
     }
@@ -256,20 +278,22 @@ public class CarRentalModel {
 	 * @return	List of cars of the given car type
 	 */
 	private List<Car> getCarsByCarType(String crcName, CarType carType) {				
-		// FIXME: use persistence instead
-
 		EntityManager em =
 				EMF.get().createEntityManager(); 
 	
 		try {
-			TypedQuery<Car> query =
-				em.createQuery("ctype.cars FROM CarType ctype "
-						+ "WHERE cTye.compName=:compName",
-						Car.class)
-				.setParameter("compName",crcName);
-	
-			List<Car> cars = query.getResultList();
-			return cars;
+			if (!carType.getCompany().equals(crcName)) {
+				return new ArrayList<Car>();
+			}
+			
+			TypedQuery<Car> query2 =
+					em.createQuery("SELECT cars FROM Car cars "
+							+ "WHERE cars.type=:cTypes",
+							Car.class)
+					.setParameter("cTypes",carType);
+			List<Car> newCars = query2.getResultList();
+			
+			return newCars;
       
 		} finally {
 			em.close();

@@ -21,7 +21,6 @@ import ds.gae.entities.CarRentalCompany;
 import ds.gae.entities.CarType;
 
 public class CarRentalServletContextListener implements ServletContextListener {
-
 	@Override
 	public void contextInitialized(ServletContextEvent arg0) {
 		// This will be invoked as part of a warming request, 
@@ -82,7 +81,7 @@ public class CarRentalServletContextListener implements ServletContextListener {
 	
 	public static Set<Car> loadData(String name, String datafile) throws NumberFormatException, IOException {
 		// FIXME: adapt the implementation of this method to your entity structure
-		
+		int carId = 1;
 		Set<Car> cars = new HashSet<Car>();
 
 		//open file from jar
@@ -102,10 +101,21 @@ public class CarRentalServletContextListener implements ServletContextListener {
 					Integer.parseInt(csvReader.nextToken()),
 					Float.parseFloat(csvReader.nextToken()),
 					Double.parseDouble(csvReader.nextToken()),
-					Boolean.parseBoolean(csvReader.nextToken()));
+					Boolean.parseBoolean(csvReader.nextToken()),
+					name);
+			
+			EntityManager em =
+					EMF.get().createEntityManager(); 
+		
+			try {
+				em.persist(type);
+			} finally {
+				em.close();
+			}
 			//create N new cars with given type, where N is the 5th field
 			for (int i = Integer.parseInt(csvReader.nextToken()); i > 0; i--) {
-				cars.add(new Car(type));
+				cars.add(new Car(carId, type));
+				carId++;
 			}
 		}
 

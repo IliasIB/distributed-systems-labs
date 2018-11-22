@@ -14,6 +14,10 @@ public class Quote {
     /***************
 	 * CONSTRUCTOR *
 	 ***************/
+    
+    Quote(){
+    	
+    }
 
     Quote(String carRenter, Date start, Date end, String rentalCompany, String carType, double rentalPrice) {
         this.carRenter = carRenter;
@@ -48,7 +52,33 @@ public class Quote {
 		return carType;
 	}
     
-    /*************
+    
+    
+    public void setStartDate(Date startDate) {
+		this.startDate = startDate;
+	}
+
+	public void setEndDate(Date endDate) {
+		this.endDate = endDate;
+	}
+
+	public void setCarRenter(String carRenter) {
+		this.carRenter = carRenter;
+	}
+
+	public void setRentalCompany(String rentalCompany) {
+		this.rentalCompany = rentalCompany;
+	}
+
+	public void setCarType(String carType) {
+		this.carType = carType;
+	}
+
+	public void setRentalPrice(double rentalPrice) {
+		this.rentalPrice = rentalPrice;
+	}
+
+	/*************
      * TO STRING *
      *************/
     

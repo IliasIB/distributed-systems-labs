@@ -32,6 +32,7 @@ public class CarRentalCompany {
 	private Key name;
 	@OneToMany(cascade=CascadeType.PERSIST)
 	private Set<Car> cars;
+	@OneToMany(cascade=CascadeType.PERSIST)
 	private Map<String,CarType> carTypes = new HashMap<String, CarType>();
 
 	/***************

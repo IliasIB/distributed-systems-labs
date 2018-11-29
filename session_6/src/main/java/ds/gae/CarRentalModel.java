@@ -3,6 +3,7 @@ package ds.gae;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -43,7 +44,8 @@ public class CarRentalModel {
 		
 		try {
 			TypedQuery<String> query =
-					em.createQuery("SELECT cType.name FROM CarType cType ", String.class);
+					em.createQuery("SELECT cType.name FROM CarType cType WHERE cType.companyName=:cName ", String.class)
+					.setParameter("cName", crcName);
 			List<String> names = query.getResultList();
 			return new HashSet<>(names); 
 		} finally {
@@ -158,35 +160,30 @@ public class CarRentalModel {
 	 * 			Therefore none of the given quotes is confirmed.
 	 */
     public List<Reservation> confirmQuotes(List<Quote> quotes) throws ReservationException {    	
-		List<Reservation> reservations = new ArrayList<>();
-
 		EntityManager em =
 				EMF.get().createEntityManager(); 
-	
-		EntityTransaction tx = em.getTransaction(); 
-		tx.begin();
 		
-		try {
-	    	for (Quote q : quotes) {
-				Reservation res = confirmQuote(q);
-	
-				em.persist(res);
-				
-				reservations.add(res);
-				
-			}
-			tx.commit();  
-		}
-		finally {
-
-			if (tx.isActive()) {
-				tx.rollback();
-				reservations.clear();
-			}
-			em.close();
+        List<Reservation> done = new LinkedList<Reservation>();
 			
+		for (Quote q : quotes) {
+			Reservation res = confirmQuote(q);
+			
+			try {
+				em.persist(res);
+				done.add(res);
+			}
+			catch (Exception e) {
+				for (Reservation reservation : done) {
+					em.remove(reservation);
+				}
+				return null;
+			}
+			finally {
+
+				em.close();
+			}
 		}
-    	return reservations;
+    	return done;
     }
 	
     /**
